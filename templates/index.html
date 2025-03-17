@@ -57,24 +57,6 @@
             background-color: #0a0;
         }
         
-        .blinking-cursor {
-            animation: blink 1s infinite;
-            display: inline-block;
-            width: 8px;
-            height: 16px;
-            background-color: #0f0;
-            vertical-align: middle;
-        }
-        
-        @keyframes blink {
-            0%, 49% { opacity: 1; }
-            50%, 100% { opacity: 0; }
-        }
-        
-        .hidden {
-            display: none;
-        }
-        
         .prompt {
             font-weight: bold;
             color: #0f0;
@@ -97,7 +79,7 @@
     <div id="terminal"></div>
     
     <div id="input-area">
-        <input type="number" id="number-input" min="1" max="100" placeholder="Enter a number (1-100)">
+        <input type="number" id="number-input" placeholder="Enter any number">
         <button id="submit-button">Submit</button>
     </div>
     
@@ -112,7 +94,7 @@
             const restartButton = document.getElementById('restart-button');
             
             // Initialize the game
-            updateGameState();
+            fetchGameState();
             
             // Auto-focus the input
             numberInput.focus();
@@ -134,8 +116,8 @@
                 const number = parseInt(numberInput.value);
                 
                 // Validate input
-                if (isNaN(number) || number < 1 || number > 100) {
-                    alert('Please enter a number between 1 and 100');
+                if (isNaN(number)) {
+                    alert('Please enter a valid number');
                     numberInput.focus();
                     return;
                 }
@@ -182,7 +164,7 @@
                 });
             }
             
-            function updateGameState() {
+            function fetchGameState() {
                 fetch('/game_state')
                 .then(response => response.json())
                 .then(data => {
@@ -214,13 +196,6 @@
                     line.textContent = message;
                     terminal.appendChild(line);
                 });
-                
-                // Add "Pick any number:" prompt if waiting for input
-                if (numberInput.disabled === false) {
-                    const promptLine = document.createElement('div');
-                    promptLine.innerHTML = '<span class="prompt">Pick any number:</span> ';
-                    terminal.appendChild(promptLine);
-                }
                 
                 // Scroll to bottom
                 terminal.scrollTop = terminal.scrollHeight;

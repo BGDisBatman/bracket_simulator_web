@@ -640,6 +640,7 @@ def initialize_game():
             "║     NCAA MARCH MADNESS BRACKET SIMULATOR      ║",
             "║                                               ║",
             "╚═══════════════════════════════════════════════╝",
+            "",
             "This simulator creates a bracket based on proprietary upset probabilities.",
             "Pick any number when prompted. An upset will occur if your number matches the generated number.",
             "Let's begin!",
@@ -892,9 +893,7 @@ def submit_number():
     data = request.get_json()
     user_choice = int(data.get('number', 0))
     
-    # Validate the number
-    if user_choice < 1 or user_choice > 100:
-        return jsonify({'error': 'Please enter a number between 1 and 100'})
+    # No validation limits - allow any number as per original code
     
     # Process the user's choice
     process_user_choice(user_choice)
