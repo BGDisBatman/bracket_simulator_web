@@ -1,4 +1,3 @@
-<!-- templates/index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,215 +6,173 @@
     <title>NCAA March Madness Bracket Simulator</title>
     <style>
         body {
-            font-family: monospace;
-            background-color: #000;
-            color: #0f0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             max-width: 800px;
             margin: 0 auto;
             padding: 20px;
+            background-color: #f5f5f5;
+            color: #333;
         }
         
-        #terminal {
-            background-color: #000;
-            color: #0f0;
-            border: 1px solid #0f0;
+        h1 {
+            color: #0066cc;
+            text-align: center;
+        }
+        
+        #simulation-container {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
             padding: 20px;
-            height: 500px;
+            margin-top: 20px;
+        }
+        
+        #messages {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 20px;
+            height: 400px;
             overflow-y: auto;
             white-space: pre-wrap;
-            font-size: 16px;
-            line-height: 1.4;
+            font-family: monospace;
+            line-height: 1.5;
         }
         
-        #input-area {
+        .input-container {
             display: flex;
-            margin-top: 10px;
+            gap: 10px;
+            margin-bottom: 20px;
         }
         
-        #number-input {
-            flex-grow: 1;
-            background-color: #000;
-            color: #0f0;
-            border: 1px solid #0f0;
-            padding: 8px;
-            font-family: monospace;
+        input, button {
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
             font-size: 16px;
         }
         
-        #submit-button {
-            background-color: #0f0;
-            color: #000;
-            border: none;
-            padding: 8px 16px;
-            margin-left: 10px;
-            cursor: pointer;
-            font-family: monospace;
-            font-weight: bold;
+        input {
+            flex-grow: 1;
         }
         
-        #submit-button:hover {
-            background-color: #0a0;
-        }
-        
-        .prompt {
-            font-weight: bold;
-            color: #0f0;
-        }
-        
-        #restart-button {
-            background-color: #f00;
+        button {
+            background-color: #0066cc;
             color: white;
-            border: none;
-            padding: 10px 20px;
-            margin-top: 10px;
             cursor: pointer;
-            font-family: monospace;
-            font-weight: bold;
-            display: none;
+            transition: background-color 0.2s;
+            min-width: 100px;
+        }
+        
+        button:hover {
+            background-color: #0056b3;
+        }
+        
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
         }
     </style>
 </head>
 <body>
-    <div id="terminal"></div>
+    <h1>NCAA March Madness Bracket Simulator</h1>
     
-    <div id="input-area">
-        <input type="number" id="number-input" placeholder="Enter any number">
-        <button id="submit-button">Submit</button>
+    <div id="simulation-container">
+        <div id="messages"></div>
+        
+        <div class="input-container">
+            <input type="number" id="user-choice" min="1" value="1" placeholder="Enter a number">
+            <button id="submit-btn">Submit</button>
+        </div>
+        
+        <button id="start-btn">Start New Simulation</button>
     </div>
     
-    <button id="restart-button">Start New Simulation</button>
-    
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const terminal = document.getElementById('terminal');
-            const numberInput = document.getElementById('number-input');
-            const submitButton = document.getElementById('submit-button');
-            const inputArea = document.getElementById('input-area');
-            const restartButton = document.getElementById('restart-button');
-            
-            // Initialize the game
-            fetchGameState();
-            
-            // Auto-focus the input
-            numberInput.focus();
-            
-            // Handle form submission
-            submitButton.addEventListener('click', handleSubmit);
-            numberInput.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    handleSubmit();
-                }
-            });
-            
-            // Handle restart button
-            restartButton.addEventListener('click', function() {
-                window.location.reload();
-            });
-            
-            function handleSubmit() {
-                const number = parseInt(numberInput.value);
-                
-                // Validate input
-                if (isNaN(number)) {
-                    alert('Please enter a valid number');
-                    numberInput.focus();
-                    return;
-                }
-                
-                // Disable input while processing
-                numberInput.disabled = true;
-                submitButton.disabled = true;
-                
-                // Send the number to the server
-                fetch('/submit_number', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ number: number })
-                })
-                .then(response => {
-                    // Check if the response is OK (status code 200-299)
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok');
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    // Check if there's an error message in the response
-                    if (data.error) {
-                        throw new Error(data.error);
-                    }
-                    
-                    // Clear the input
-                    numberInput.value = '';
-                    
-                    // Update the terminal
-                    updateTerminalWithMessages(data.messages);
-                    
-                    // Check if game is over
-                    if (data.game_over) {
-                        inputArea.style.display = 'none';
-                        restartButton.style.display = 'block';
-                    } else {
-                        // Re-enable input if we're waiting for user input
-                        numberInput.disabled = !data.waiting_for_input;
-                        submitButton.disabled = !data.waiting_for_input;
-                        
-                        if (data.waiting_for_input) {
-                            numberInput.focus();
-                        }
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    // More informative error message
-                    alert('An error occurred: ' + error.message + '\nPlease try again with a different number.');
-                    // Always re-enable the input on error
-                    numberInput.disabled = false;
-                    submitButton.disabled = false;
-                    numberInput.focus();
-                    numberInput.select(); // Select the current input for easy replacement
-                });
-            }
-            
-            function fetchGameState() {
-                fetch('/game_state')
-                .then(response => response.json())
-                .then(data => {
-                    updateTerminalWithMessages(data.messages);
-                    
-                    // Enable/disable input based on game state
-                    numberInput.disabled = !data.waiting_for_input;
-                    submitButton.disabled = !data.waiting_for_input;
-                    
-                    if (data.game_over) {
-                        inputArea.style.display = 'none';
-                        restartButton.style.display = 'block';
-                    } else if (data.waiting_for_input) {
-                        numberInput.focus();
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                });
-            }
-            
-            function updateTerminalWithMessages(messages) {
-                // Clear terminal
-                terminal.innerHTML = '';
-                
-                // Add each message
-                messages.forEach(message => {
-                    const line = document.createElement('div');
-                    line.textContent = message;
-                    terminal.appendChild(line);
-                });
-                
-                // Scroll to bottom
-                terminal.scrollTop = terminal.scrollHeight;
+        // DOM elements
+        const messagesEl = document.getElementById('messages');
+        const userChoiceEl = document.getElementById('user-choice');
+        const submitBtn = document.getElementById('submit-btn');
+        const startBtn = document.getElementById('start-btn');
+        
+        // Initialize the simulation
+        window.onload = startSimulation;
+        
+        // Event listeners
+        startBtn.addEventListener('click', startSimulation);
+        submitBtn.addEventListener('click', submitChoice);
+        
+        // Submit on Enter key press
+        userChoiceEl.addEventListener('keyup', function(event) {
+            if (event.key === 'Enter') {
+                submitChoice();
             }
         });
+        
+        // Function to start a new simulation
+        function startSimulation() {
+            fetch('/api/start', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Display messages
+                displayMessages(data.messages);
+                
+                // Update button states
+                submitBtn.disabled = !data.waiting_for_input;
+                startBtn.disabled = !data.game_over;
+                
+                // Focus on input field
+                if (data.waiting_for_input) {
+                    userChoiceEl.focus();
+                }
+            })
+            .catch(error => {
+                console.error('Error starting simulation:', error);
+            });
+        }
+        
+        // Function to submit the user's choice
+        function submitChoice() {
+            const choice = userChoiceEl.value;
+            
+            fetch('/api/submit', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ choice: choice })
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Display messages
+                displayMessages(data.messages);
+                
+                // Update button states
+                submitBtn.disabled = !data.waiting_for_input;
+                startBtn.disabled = !data.game_over;
+                
+                // Reset and focus input field
+                userChoiceEl.value = '1';
+                if (data.waiting_for_input) {
+                    userChoiceEl.focus();
+                }
+            })
+            .catch(error => {
+                console.error('Error submitting choice:', error);
+            });
+        }
+        
+        // Function to display messages
+        function displayMessages(messages) {
+            messagesEl.textContent = messages.join('\n');
+            messagesEl.scrollTop = messagesEl.scrollHeight; // Auto-scroll to bottom
+        }
     </script>
 </body>
 </html>
