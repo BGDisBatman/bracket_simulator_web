@@ -134,8 +134,19 @@
                     },
                     body: JSON.stringify({ number: number })
                 })
-                .then(response => response.json())
+                .then(response => {
+                    // Check if the response is OK (status code 200-299)
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
                 .then(data => {
+                    // Check if there's an error message in the response
+                    if (data.error) {
+                        throw new Error(data.error);
+                    }
+                    
                     // Clear the input
                     numberInput.value = '';
                     
@@ -158,9 +169,13 @@
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    alert('An error occurred. Please try again.');
+                    // More informative error message
+                    alert('An error occurred: ' + error.message + '\nPlease try again with a different number.');
+                    // Always re-enable the input on error
                     numberInput.disabled = false;
                     submitButton.disabled = false;
+                    numberInput.focus();
+                    numberInput.select(); // Select the current input for easy replacement
                 });
             }
             
