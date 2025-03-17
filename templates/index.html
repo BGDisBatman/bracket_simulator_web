@@ -1,16 +1,231 @@
+<!-- templates/index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bracket Simulator</title>
+    <title>NCAA March Madness Bracket Simulator</title>
+    <style>
+        body {
+            font-family: monospace;
+            background-color: #000;
+            color: #0f0;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        #terminal {
+            background-color: #000;
+            color: #0f0;
+            border: 1px solid #0f0;
+            padding: 20px;
+            height: 500px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            font-size: 16px;
+            line-height: 1.4;
+        }
+        
+        #input-area {
+            display: flex;
+            margin-top: 10px;
+        }
+        
+        #number-input {
+            flex-grow: 1;
+            background-color: #000;
+            color: #0f0;
+            border: 1px solid #0f0;
+            padding: 8px;
+            font-family: monospace;
+            font-size: 16px;
+        }
+        
+        #submit-button {
+            background-color: #0f0;
+            color: #000;
+            border: none;
+            padding: 8px 16px;
+            margin-left: 10px;
+            cursor: pointer;
+            font-family: monospace;
+            font-weight: bold;
+        }
+        
+        #submit-button:hover {
+            background-color: #0a0;
+        }
+        
+        .blinking-cursor {
+            animation: blink 1s infinite;
+            display: inline-block;
+            width: 8px;
+            height: 16px;
+            background-color: #0f0;
+            vertical-align: middle;
+        }
+        
+        @keyframes blink {
+            0%, 49% { opacity: 1; }
+            50%, 100% { opacity: 0; }
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .prompt {
+            font-weight: bold;
+            color: #0f0;
+        }
+        
+        #restart-button {
+            background-color: #f00;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin-top: 10px;
+            cursor: pointer;
+            font-family: monospace;
+            font-weight: bold;
+            display: none;
+        }
+    </style>
 </head>
 <body>
-    <h1>Run Bracket Simulator</h1>
-    <form action="/run_script" method="post">
-        <label for="input_data">Enter Input Data:</label>
-        <input type="text" id="input_data" name="input_data" required>
-        <button type="submit">Run Simulation</button>
-    </form>
+    <div id="terminal"></div>
+    
+    <div id="input-area">
+        <input type="number" id="number-input" min="1" max="100" placeholder="Enter a number (1-100)">
+        <button id="submit-button">Submit</button>
+    </div>
+    
+    <button id="restart-button">Start New Simulation</button>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const terminal = document.getElementById('terminal');
+            const numberInput = document.getElementById('number-input');
+            const submitButton = document.getElementById('submit-button');
+            const inputArea = document.getElementById('input-area');
+            const restartButton = document.getElementById('restart-button');
+            
+            // Initialize the game
+            updateGameState();
+            
+            // Auto-focus the input
+            numberInput.focus();
+            
+            // Handle form submission
+            submitButton.addEventListener('click', handleSubmit);
+            numberInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    handleSubmit();
+                }
+            });
+            
+            // Handle restart button
+            restartButton.addEventListener('click', function() {
+                window.location.reload();
+            });
+            
+            function handleSubmit() {
+                const number = parseInt(numberInput.value);
+                
+                // Validate input
+                if (isNaN(number) || number < 1 || number > 100) {
+                    alert('Please enter a number between 1 and 100');
+                    numberInput.focus();
+                    return;
+                }
+                
+                // Disable input while processing
+                numberInput.disabled = true;
+                submitButton.disabled = true;
+                
+                // Send the number to the server
+                fetch('/submit_number', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ number: number })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // Clear the input
+                    numberInput.value = '';
+                    
+                    // Update the terminal
+                    updateTerminalWithMessages(data.messages);
+                    
+                    // Check if game is over
+                    if (data.game_over) {
+                        inputArea.style.display = 'none';
+                        restartButton.style.display = 'block';
+                    } else {
+                        // Re-enable input if we're waiting for user input
+                        numberInput.disabled = !data.waiting_for_input;
+                        submitButton.disabled = !data.waiting_for_input;
+                        
+                        if (data.waiting_for_input) {
+                            numberInput.focus();
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred. Please try again.');
+                    numberInput.disabled = false;
+                    submitButton.disabled = false;
+                });
+            }
+            
+            function updateGameState() {
+                fetch('/game_state')
+                .then(response => response.json())
+                .then(data => {
+                    updateTerminalWithMessages(data.messages);
+                    
+                    // Enable/disable input based on game state
+                    numberInput.disabled = !data.waiting_for_input;
+                    submitButton.disabled = !data.waiting_for_input;
+                    
+                    if (data.game_over) {
+                        inputArea.style.display = 'none';
+                        restartButton.style.display = 'block';
+                    } else if (data.waiting_for_input) {
+                        numberInput.focus();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+            }
+            
+            function updateTerminalWithMessages(messages) {
+                // Clear terminal
+                terminal.innerHTML = '';
+                
+                // Add each message
+                messages.forEach(message => {
+                    const line = document.createElement('div');
+                    line.textContent = message;
+                    terminal.appendChild(line);
+                });
+                
+                // Add "Pick any number:" prompt if waiting for input
+                if (numberInput.disabled === false) {
+                    const promptLine = document.createElement('div');
+                    promptLine.innerHTML = '<span class="prompt">Pick any number:</span> ';
+                    terminal.appendChild(promptLine);
+                }
+                
+                // Scroll to bottom
+                terminal.scrollTop = terminal.scrollHeight;
+            }
+        });
+    </script>
 </body>
 </html>

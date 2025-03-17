@@ -1,10 +1,6 @@
 import random
 import time
 
-def simulate(input_data):
-    # Placeholder logic – replace this with your actual simulation code
-    return f"Simulated result for input: {input_data}"
-
 def get_first_round_upset_chance(seed1, seed2):
     """Returns the correct upset chance for first round matchups"""
     # Higher seed is the one with the lower number
